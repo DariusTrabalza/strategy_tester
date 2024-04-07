@@ -59,13 +59,12 @@ leverage = 0.5 # is this 2x leverage?
 sl = 0.95
 
 
-class MySMAStrategy(Strategy):
+class SMA_21_55(Strategy):
 
     #strategy variables
     ma1 = 21
-    ma2 = 50
-    sl = 0.95
-    tp = 1.05
+    ma2 = 55
+    
 
 
     def init(self):
@@ -81,14 +80,71 @@ class MySMAStrategy(Strategy):
         if crossover(self.ma1,self.ma2):
             if self.position.is_short or not self.position:
                 self.position.close()
-                self.buy(sl = self.sl * price)
+                self.buy()
 
         #sell cond
         elif crossover(self.ma2,self.ma1):
             if self.position.is_long or not self.position:
                 self.position.close()
-                self.sell(sl = (price + ((1 - self.sl) * price)))
+                self.sell()
 
+class SMA_9_21(Strategy):
+
+    #strategy variables
+    ma1 = 9
+    ma2 = 21
+    
+
+
+    def init(self):
+        price = self.data.Close
+        self.ma1 = self.I(SMA,price,self.ma1)
+        self.ma2 = self.I(SMA,price,self.ma2)
+        
+
+    def next(self):
+
+        price = self.data.Close[-1]
+        #buy cond
+        if crossover(self.ma1,self.ma2):
+            if self.position.is_short or not self.position:
+                self.position.close()
+                self.buy()
+
+        #sell cond
+        elif crossover(self.ma2,self.ma1):
+            if self.position.is_long or not self.position:
+                self.position.close()
+                self.sell()
+
+class SMA_21_89(Strategy):
+
+    #strategy variables
+    ma1 = 21
+    ma2 = 89
+    
+
+
+    def init(self):
+        price = self.data.Close
+        self.ma1 = self.I(SMA,price,self.ma1)
+        self.ma2 = self.I(SMA,price,self.ma2)
+        
+
+    def next(self):
+
+        price = self.data.Close[-1]
+        #buy cond
+        if crossover(self.ma1,self.ma2):
+            if self.position.is_short or not self.position:
+                self.position.close()
+                self.buy()
+
+        #sell cond
+        elif crossover(self.ma2,self.ma1):
+            if self.position.is_long or not self.position:
+                self.position.close()
+                self.sell()
 
 '''
 #optimisation function
@@ -113,17 +169,56 @@ def main():
 
 '''
 def main():
-    bt= Backtest(data,MySMAStrategy,cash = cash, commission  = fee)
+    bt= Backtest(data,RSI_70_30,cash = cash, commission  = fee)
     stats = bt.run()
     bt.plot()
 
 
+class RSI_70_30(Strategy):
+
+    upper_bound = 70
+    lower_bound = 30
+    rsi_window = 14
+
+    def init(self):
+        self.rsi = self.I(ta.RSI,self.data.Close,self.rsi_window)
+        
+    def next(self):
+        if (crossover(self.rsi,self.upper_bound)):
+            if self.position.is_short or not self.position:
+                self.position.close()
+                self.buy()
+        
+        elif (crossover(self.lower_bound,self.rsi)):
+            if self.position.is_long or not self.position:
+                self.position.close()
+                self.sell()
+
+
+class RSI_80_20(Strategy):
+
+    upper_bound = 80
+    lower_bound = 20
+    rsi_window = 14
+
+    def init(self):
+        self.rsi = self.I(ta.RSI,self.data.Close,self.rsi_window)
+        
+    def next(self):
+        if (crossover(self.rsi,self.upper_bound)):
+            if self.position.is_short or not self.position:
+                self.position.close()
+                self.buy()
+        
+        elif (crossover(self.lower_bound,self.rsi)):
+            if self.position.is_long or not self.position:
+                self.position.close()
+                self.sell()
 
 
 
 
-
-class RSI_oscillator(Strategy):
+class RSI_multi_timeframe(Strategy):
 
     upper_bound = 70
     lower_bound = 30
