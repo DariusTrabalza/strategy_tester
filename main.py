@@ -10,15 +10,22 @@
 #graphs should show different timespans e.g how it performed in the last week, last month, this year, 2 years ago, 5 years to today.
 
 
-#pick up notes
-#reset the data set with both tickers and more months back
+#PICK UP NOTES****
+
+#figure out how to get all the data ready to be visualised now just need finish the visualisation. maybe as a dashboard
+#FYI the terminal doesnt print out the entire final dict i think its too big. the data is all there
+
+#reload the data with all months
 #plot top N strategies onto one graph with benchmarks such as S and P and BTC already on there to compare
+#create dashboard of each strategy with a chart for each single kpi vs all timeframes together
+#at the top of dashboard should be which a list of kpi's and which strategy performed best for each one
+
 
 
 #need to figure out the final sorting and the visualisation
 #then add more strategies 
-#how do i store all of the results in a digestable way?
-#maybe a dataframe each for strategy with timeframe x axis and metrics on the y axis
+
+
 #maybe the tables can be organisable by metric
 #cells with positive values should be green  and bad red. or heat map vibe
 
@@ -58,6 +65,8 @@ def main(force_load = False):
     fee = 0.0002
     file_path = "raw_data.csv"
     sort_metric = "Return [%]"
+    #any strategies without n trades will not be shown
+    trade_num_threshold = 1
     #number of results to return
     winners = 2
 
@@ -78,14 +87,14 @@ def main(force_load = False):
     #convert data to diff timeframes
     aggregated_data = aggregator(collected_data)
     #test different strategies and return the best
-    results,results_list = strategy_test(aggregated_data,leverage,position_size,initial_balance,fee,sort_metric,winners)
+    complete_results = strategy_test(aggregated_data,leverage,position_size,initial_balance,fee,sort_metric,winners,trade_num_threshold)
     
-    visualise_data(results,results_list,sort_metric)
+    #visualise_data(results,results_list,sort_metric)
 
 def collector(file_path):
 
     #list of all assets/here can we fetch a request of all available tickers or do we jusjt copy and paste a list
-    tickers = ["MSFT"]#,"TSLA"]
+    tickers = ["MSFT","TSLA"]
     #api key
     alpha_v_key = "QJDF8ZZZBBQBTOS9"
     #interval
@@ -95,13 +104,15 @@ def collector(file_path):
     master_dict = {}
 
     #initiate empty df for results
-    full_single_ticker_data = pd.DataFrame()
+    #full_single_ticker_data = pd.DataFrame()
 
     #set months of last 2 years/Eventually this will use a function that generates to a specific amount of data
-    months = ["2023-03","2023-04"]#,"2023-05","2023-06","2023-07","2023-08","2023-09","2023-10","2023-11","2023-12"]}
+    months = ["2023-03","2023-04","2023-05","2023-06","2023-07","2023-08","2023-09","2023-10","2023-11","2023-12"]
 
     #make multiple requests. Let us aim to have 1 year of data initially
     for ticker in tickers:
+        #initiate empty df for results
+        full_single_ticker_data = pd.DataFrame()
         #for every month
         for month in months:
             #make the request
@@ -110,11 +121,11 @@ def collector(file_path):
             response = requests.get(url)
             #get response as json
             data = response.json()
-            print(f"This is the json file\n{data}")
+           
 
             #change json to df
             df = pd.DataFrame(data[f'Time Series ({interval})']).T
-            print(f"df after change json line: {df}")
+            
             #add the current month to full single ticker df
             full_single_ticker_data = full_single_ticker_data.append(df)
 
@@ -122,7 +133,7 @@ def collector(file_path):
         full_single_ticker_data =full_single_ticker_data.sort_index()
         full_single_ticker_data.index = pd.to_datetime(full_single_ticker_data.index)
         full_single_ticker_data.rename(columns={"1. open":"Open","2. high":"High","3. low":"Low","4. close":"Close","5. volume": "Volume"},inplace=True)
-        print(f"full single ticker data\n{full_single_ticker_data}")
+        #print(f"full single ticker data\n{full_single_ticker_data}")
         #once the full ticker df is complete save it to a dict. keys = tickername, values = df
         master_dict[ticker] = full_single_ticker_data
     #inspect master_df here
@@ -157,7 +168,7 @@ def aggregator(collected_data):
 
 
 
-def strategy_test(aggregated_data,leverage,position_size,initial_balance,fee,sort_metric,winners):
+def strategy_test(aggregated_data,leverage,position_size,initial_balance,fee,sort_metric,winners,trade_num_threshold):
     
     strategies = [SMA_21_55,RSI_70_30,RSI_80_20,SMA_21_89,SMA_9_21]
     
@@ -175,22 +186,79 @@ def strategy_test(aggregated_data,leverage,position_size,initial_balance,fee,sor
             backtest = Backtest(df,strat,commission = fee, exclusive_orders = True, cash = initial_balance)
             #run backtest and store result
             single_result = backtest.run()
-            #print(single_result)
             #convert result to dictionary
             result_dict = single_result.to_dict()
             #add name of df and strategy as key and results as value
             results_key = f"{df_key}_{strat.__name__}"
+            
             results[results_key] = result_dict
 
-        #NOTE this is how to refer to a specific result
-        #print(results[results_key]["Return [%]"])
-            
-    results_unsorted = [(k,v[sort_metric]) for k, v in results.items()]
+    #This part is only necessary if i still want to show the best results        
+    results_unsorted = [(k,v[sort_metric]) for k, v in results.items() if v["# Trades"] > trade_num_threshold]
 
-    results_list =  sorted(results_unsorted, key=lambda x: x[1], reverse=True)[:winners]
-    #print(results_list)
-  
-    return results,results_list
+    #PREVIOUS METHOD OF ONLY VISUALISING THE TOP N STRATS
+    #the lambda function is the part sorting by the specific kpi
+    #results_list =  sorted(results_unsorted, key=lambda x: x[1], reverse=True)[:winners]
+    results_list =  sorted(results_unsorted, key=lambda x: x[1], reverse=True)
+    
+
+    
+
+    #store dictionaries of the Kpis i want to graph
+    strategy_metrics = {
+        "return_metric": {},
+        "buy_and_hold_return_metric" : {},
+        "sharpe_ratio_metric" : {},
+        "max_drawdown_metric" : {},
+        "num_trades_metric" : {},
+        "win_rate_metric" : {},
+        "average_trade_metric" : {},
+        "profit_factor_metric" : {},
+        
+    }
+    #a list of the syntax for the metrics
+    #desired_metrics = ["Return [%]", "Buy & Hold Return [%]", "Max. Drawdown [%]", "# Trades", "Win Rate [%]", "Avg. Trade [%]", "Profit Factor", "Sharpe Ratio"]
+
+    #output list of names of dicts
+    dicts_name_list = []
+
+
+    #loop over every asset/timeframe & results
+    for key, value in results.items():
+
+        #append to stategy metrics strat names as key and metric score as value
+        strategy_metrics["return_metric"][key] = value["Return [%]"]
+        strategy_metrics["buy_and_hold_return_metric"][key] = value["Buy & Hold Return [%]"]
+        strategy_metrics["sharpe_ratio_metric"][key] = value["Sharpe Ratio"]
+        strategy_metrics["max_drawdown_metric"][key] = value["Max. Drawdown [%]"]
+        strategy_metrics["num_trades_metric"][key] = value["# Trades"]
+        strategy_metrics["win_rate_metric"][key] = value["Win Rate [%]"]
+        strategy_metrics["average_trade_metric"][key] = value["Avg. Trade [%]"]
+        strategy_metrics["profit_factor_metric"][key] = value["Profit Factor"]
+
+        ticker_single,timeframe_single,strat_single= get_ticker_timeframe_strat(key)
+
+        #check if name already in dict_name_list
+        if (ticker_single,strat_single) not in dicts_name_list:
+            dicts_name_list.append((ticker_single,strat_single))
+
+    #final dict ready to be visualised
+    final_dict = {}
+
+    #get results and assign the to correct strat ticker combo
+    for key, value in results.items():
+        #get the shortened version to check against dict_name_list
+        ticker_final,timeframe_final,strat_final= get_ticker_timeframe_strat(key)
+        #if name is in the dicts_name_list
+        if (ticker_final, strat_final) in dicts_name_list:
+            #if the sub dict has not been initiated then do that
+            if f"{ticker_final}_{strat_final}" not in final_dict:
+                final_dict[f"{ticker_final}_{strat_final}"] = {}
+            #assign correct results to correct name
+            final_dict[f"{ticker_final}_{strat_final}"][timeframe_final] = value
+    
+    print(final_dict)
+    return(final_dict)
 
 
 
@@ -211,42 +279,36 @@ def visualise_data(results, results_list,sort_metric):
          plt.tight_layout()
          plt.show()
 
+def get_ticker_timeframe_strat(string):
+        ticker_ = ""
+        timeframe_ = ""
+        strat_ = ""
+        #get the ticker store everything in string until first "_"
+        for letter in string:
+            if letter == "_":
+                break
+            else:
+                ticker_ += letter
+        #get timeframe. store everything in string from first "_" stop at next "_"
+        _count = 0
+        for letter in string:
+            if _count == 1 and not letter == "_":
+                timeframe_ += letter
+            if letter =="_":
+                _count += 1
 
+        #get strategy. store every part of string after 2nd "_"
+        _count = 0
+        for letter in string:
+            if _count >= 2:
+                strat_ += letter
+            if letter =="_":
+                _count += 1
 
-    #print(final_results)
-        #what do i want to do here?
-         # i have name and dict of results within a dict
-         #do i need to plot a graph
-         #should i show/save the trading graph of them?
-         # i guess i want to plot the equity curves of all of them?
-    '''
-         plt.plot(final_results[name]["_equity_curve"].dropna())
-         plt.title(f"{name} Equity Curve")
-         plt.xlabel("Time")
-         plt.ylabel("Equity")
-         plt.legend()
-         plt.show()
-
-        '''
-    '''
-    plt.title("Top 3 Strategies by Sharpe Ratio - Equity Curve")
-    plt.xlabel("Time")
-    plt.ylabel("Equity")
-    plt.legend()
-    plt.show()
-    '''
-    #list of timespanss
-
-    #for every dict in results list of dictionaries:
-        #for every element of the dict:
-            #for every time span in list of timespans:
-                #if ordered == true:
-                    #sort(#plot the results of the asset on the timespan)
-                
-                
-                #else:
-                    #plot the results of the asset on the timespan
+        
+        return(ticker_,timeframe_,strat_)
     
+
 if __name__ == "__main__":
     
     main(force_load=False)
