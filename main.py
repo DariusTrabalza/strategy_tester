@@ -1,9 +1,6 @@
-from alpha_vantage.timeseries import TimeSeries
 import matplotlib.pyplot as plt
 import pandas as pd
-import pandas_ta as ta
 import requests
-import numpy as np
 import os
 import pickle
 from backtesting import Backtest, Strategy
@@ -35,6 +32,7 @@ def main(force_load = False):
             print("Loading saved data...")
             collected_data = pickle.load(file)
             print("Load complete")
+            print(f"Collected Data:\n{collected_data}")
     #convert data to diff timeframes
     aggregated_data = aggregator(collected_data)
     #test different strategies and return the best
@@ -52,7 +50,7 @@ def collector(file_path):
     #store outputs as a dict
     master_dict = {}
     #months to test
-    months = ["2023-03","2023-04","2023-05","2023-06","2023-07","2023-08","2023-09","2023-10","2023-11","2023-12"]
+    months = ["2024-01","2024-02","2024-03"]
     #make multiple requests
     for ticker in tickers:
         #initiate empty df for results
@@ -66,12 +64,8 @@ def collector(file_path):
             response = requests.get(url)
             #get response as json
             data = response.json()
-            #change json to df
-            # df = pd.DataFrame(data[f'Time Series ({interval})']).T
-            # #add the current month to full single ticker df
-            # full_single_ticker_data = full_single_ticker_data.append(df)
 
-            ##new
+            #check if already in data
             if f'Time Series ({interval})' in data:
                 df = pd.DataFrame(data[f'Time Series ({interval})']).T
                 # add the current month to full single ticker list
@@ -84,9 +78,6 @@ def collector(file_path):
             full_single_ticker_data = pd.concat(full_single_ticker_data)
         else:
             full_single_ticker_data = pd.DataFrame()
-
-            ##END new
-
 
         #sort the data by timestamp
         full_single_ticker_data =full_single_ticker_data.sort_index()
@@ -234,4 +225,4 @@ def get_ticker_timeframe_strat(string):
     
 if __name__ == "__main__":
     
-    main(force_load=True)
+    main(force_load=False)

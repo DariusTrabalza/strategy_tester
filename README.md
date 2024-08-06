@@ -14,13 +14,15 @@ Required Python packages:
 requests
 pandas
 pickle
+backtesting
+ta lib
 
 ## Sensitive info
 Remember to get a alpha_vantage API key here: https://www.alphavantage.co/support/#api-key
 The free version has a low request limit. If you really want to explore many assets I would recoment the paid for one.
 
 ## Usage details
-Edit the variables at the top of the main function in main.py to edit parameters of the strategy. To stop the data downloading every time the program is run I've implemented a force load option for if the data has already been downloaded. It should save a file called 'raw_data.csv'
+Edit the variables at the top of the main function in main.py to edit parameters of the strategy. To stop the data downloading every time the program is run I've implemented a force load option for if the data has already been downloaded. It should save a file called 'raw_data.csv'. If you wish to re-download the data by force change the 'force_reload = False' to 'force_reload = True' at the bottom of the script in the 'if __name__ == "__main__":' section.
 
 If you want to add a large time-frame, add to the list of months in the main function. I hope to upgrade this system soon. Also to add to number of tickers that are being tested add to the ticker list in the main function. Beware of the API request limit if adding more to either.
 
