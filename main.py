@@ -12,6 +12,7 @@ from strategy_classes import SMA_21_55,RSI_70_30,RSI_80_20,SMA_21_89,SMA_9_21
 def main(force_load = False):
     #strategy variables
     initial_balance = 1_000_000
+    #position size functionality still needs implementing
     position_size = [1]
     #leverage functionality still needs implementing
     leverage = [1]
@@ -54,7 +55,6 @@ def collector(file_path):
     #make multiple requests
     for ticker in tickers:
         #initiate empty df for results
-        #full_single_ticker_data = pd.DataFrame()
         full_single_ticker_data = []
         #for every month
         for month in months:
